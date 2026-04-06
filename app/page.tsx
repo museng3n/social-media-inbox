@@ -302,8 +302,19 @@ export default function MessagesPage() {
   const [showQuickReplies, setShowQuickReplies] = useState(false)
   const [messages, setMessages] = useState(messagesData)
 
-  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-  const [language, setLanguage] = useState<'ar' | 'en'>((urlParams.get('lang') as 'ar' | 'en') || (typeof window !== 'undefined' ? localStorage.getItem('triggerio_language') as 'ar' | 'en' : null) || 'ar');
+  const [language, setLanguage] = useState<'ar' | 'en'>('ar');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlLang = params.get('lang');
+    if (urlLang === 'ar' || urlLang === 'en') {
+      setLanguage(urlLang);
+      localStorage.setItem('triggerio_language', urlLang);
+    } else {
+      const stored = localStorage.getItem('triggerio_language');
+      if (stored === 'ar' || stored === 'en') setLanguage(stored as 'ar' | 'en');
+    }
+  }, []);
 
   useEffect(() => {
     document.dir = language === 'ar' ? 'rtl' : 'ltr';

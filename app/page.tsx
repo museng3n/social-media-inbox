@@ -311,11 +311,21 @@ export default function MessagesPage() {
     return 'ar'
   });
 
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light';
+    const urlTheme = new URLSearchParams(window.location.search).get('theme');
+    if (urlTheme === 'light' || urlTheme === 'dark') return urlTheme as 'light' | 'dark';
+    const stored = localStorage.getItem('triggerio_theme');
+    if (stored === 'light' || stored === 'dark') return stored as 'light' | 'dark';
+    return 'light';
+  });
+
   // Set document direction synchronously before first render
   if (typeof document !== 'undefined') {
     document.dir = language === 'ar' ? 'rtl' : 'ltr'
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr'
     document.body.dir = language === 'ar' ? 'rtl' : 'ltr'
+    document.documentElement.setAttribute('data-theme', theme);
   }
 
   useEffect(() => {
@@ -327,10 +337,22 @@ export default function MessagesPage() {
   }, [language]);
 
   useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'LANGUAGE_CHANGE') {
         setLanguage(event.data.language);
         localStorage.setItem('triggerio_language', event.data.language);
+      }
+      if (event.data?.type === 'THEME_CHANGE') {
+        const t = event.data.theme;
+        if (t === 'light' || t === 'dark') {
+          setTheme(t as 'light' | 'dark');
+          localStorage.setItem('triggerio_theme', t);
+          document.documentElement.setAttribute('data-theme', t);
+        }
       }
     };
     window.addEventListener('message', handleMessage);
@@ -373,13 +395,34 @@ export default function MessagesPage() {
     setMessageText("")
   }
 
+  const colors = theme === 'dark' ? {
+    pageBg: '#11111b', cardBg: '#1e1e2e', cardBgHover: '#2a2a3c', surfaceBg: '#313244',
+    text: '#cdd6f4', textSecondary: '#a6adc8', textMuted: '#6c7086', heading: '#cdd6f4',
+    border: '#313244', borderLight: '#45475a',
+    inputBg: '#313244', inputText: '#cdd6f4', inputBorder: '#45475a',
+    tableHeaderBg: '#1e1e2e', tableRowHover: '#2a2a3c',
+  } : {
+    pageBg: '#f9fafb', cardBg: '#ffffff', cardBgHover: '#f9fafb', surfaceBg: '#f3f4f6',
+    text: '#374151', textSecondary: '#6b7280', textMuted: '#9ca3af', heading: '#111827',
+    border: '#e5e7eb', borderLight: '#f3f4f6',
+    inputBg: '#ffffff', inputText: '#374151', inputBorder: '#d1d5db',
+    tableHeaderBg: '#f9fafb', tableRowHover: '#f3f4f6',
+  };
+
   return (
-    <div dir={language === 'ar' ? 'rtl' : 'ltr'} className="h-screen flex bg-[#F3F4F6]">
+    <div
+      dir={language === 'ar' ? 'rtl' : 'ltr'}
+      className="h-screen flex"
+      style={{ background: colors.pageBg, color: colors.text }}
+    >
       {/* LEFT COLUMN: Conversations List (30%) */}
-      <div className="w-[30%] bg-white border-l border-gray-200 flex flex-col">
+      <div
+        className="w-[30%] flex flex-col"
+        style={{ background: colors.cardBg, borderRight: `1px solid ${colors.border}` }}
+      >
         {/* Header */}
-        <div className="p-4 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+        <div className="p-4" style={{ borderBottom: `1px solid ${colors.border}` }}>
+          <h1 className="text-2xl font-bold mb-4" style={{ color: colors.heading }}>
             {t.pageTitle}
           </h1>
 
@@ -390,10 +433,16 @@ export default function MessagesPage() {
               placeholder={t.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent text-right"
+              className="w-full px-10 py-2 rounded-lg focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent text-right"
+              style={{
+                background: colors.inputBg,
+                color: colors.inputText,
+                border: `1px solid ${colors.inputBorder}`,
+              }}
             />
             <svg
-              className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+              className="absolute left-3 top-2.5 w-5 h-5"
+              style={{ color: colors.textMuted }}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -409,36 +458,40 @@ export default function MessagesPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex gap-2 p-4 overflow-x-auto border-b border-gray-200">
+        <div className="flex gap-2 p-4 overflow-x-auto" style={{ borderBottom: `1px solid ${colors.border}` }}>
           <button
             onClick={() => setFilter("all")}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-              filter === "all" ? "bg-[#7C3AED] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              filter === "all" ? "bg-[#7C3AED] text-white" : ""
             }`}
+            style={filter !== "all" ? { background: colors.surfaceBg, color: colors.text } : {}}
           >
             {t.filterAll}
           </button>
           <button
             onClick={() => setFilter("unread")}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-              filter === "unread" ? "bg-[#7C3AED] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              filter === "unread" ? "bg-[#7C3AED] text-white" : ""
             }`}
+            style={filter !== "unread" ? { background: colors.surfaceBg, color: colors.text } : {}}
           >
             {t.filterUnread}
           </button>
           <button
             onClick={() => setFilter("starred")}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-              filter === "starred" ? "bg-[#7C3AED] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              filter === "starred" ? "bg-[#7C3AED] text-white" : ""
             }`}
+            style={filter !== "starred" ? { background: colors.surfaceBg, color: colors.text } : {}}
           >
             {t.filterStarred}
           </button>
           <button
             onClick={() => setFilter("instagram")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2 whitespace-nowrap ${
-              filter === "instagram" ? "bg-[#7C3AED] text-white" : "bg-gray-100 text-gray-700"
+            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap ${
+              filter === "instagram" ? "bg-[#7C3AED] text-white" : ""
             }`}
+            style={filter !== "instagram" ? { background: colors.surfaceBg, color: colors.text } : {}}
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
@@ -447,9 +500,10 @@ export default function MessagesPage() {
           </button>
           <button
             onClick={() => setFilter("facebook")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center gap-2 whitespace-nowrap ${
-              filter === "facebook" ? "bg-[#7C3AED] text-white" : "bg-gray-100 text-gray-700"
+            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 whitespace-nowrap ${
+              filter === "facebook" ? "bg-[#7C3AED] text-white" : ""
             }`}
+            style={filter !== "facebook" ? { background: colors.surfaceBg, color: colors.text } : {}}
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
@@ -460,99 +514,133 @@ export default function MessagesPage() {
 
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto">
-          {filteredConversations.map((conversation) => (
-            <div
-              key={conversation.id}
-              onClick={() => setSelectedConversation(conversation)}
-              className={`p-4 border-b border-gray-200 cursor-pointer transition-colors ${
-                conversation.unread ? "bg-purple-50" : "bg-white hover:bg-gray-50"
-              } ${selectedConversation?.id === conversation.id ? "bg-purple-100 border-l-4 border-l-[#7C3AED]" : ""}`}
-            >
-              <div className="flex items-start gap-3">
-                {/* Avatar with status */}
-                <div className="relative flex-shrink-0">
-                  <img
-                    src={conversation.avatar || "/placeholder.svg"}
-                    alt={conversation.contactName}
-                    className="w-12 h-12 rounded-full"
-                  />
-                  {conversation.status === "online" && (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#10B981] border-2 border-white rounded-full"></span>
-                  )}
-                  {/* Platform badge */}
-                  <div className="absolute -bottom-1 -left-1 w-5 h-5 bg-white rounded-full flex items-center justify-center border border-gray-200">
-                    {conversation.platform === "instagram" ? (
-                      <svg className="w-3 h-3 text-pink-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                      </svg>
+          {filteredConversations.map((conversation) => {
+            const isSelected = selectedConversation?.id === conversation.id;
+            return (
+              <div
+                key={conversation.id}
+                onClick={() => setSelectedConversation(conversation)}
+                className="p-4 cursor-pointer transition-colors"
+                style={{
+                  background: isSelected
+                    ? colors.surfaceBg
+                    : conversation.unread
+                    ? (theme === 'dark' ? '#2a2040' : '#f5f3ff')
+                    : colors.cardBg,
+                  borderBottom: `1px solid ${colors.border}`,
+                  borderLeft: isSelected ? `4px solid #7C3AED` : '4px solid transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = colors.cardBgHover;
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    (e.currentTarget as HTMLDivElement).style.background = conversation.unread
+                      ? (theme === 'dark' ? '#2a2040' : '#f5f3ff')
+                      : colors.cardBg;
+                  }
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Avatar with status */}
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={conversation.avatar || "/placeholder.svg"}
+                      alt={conversation.contactName}
+                      className="w-12 h-12 rounded-full"
+                    />
+                    {conversation.status === "online" && (
+                      <span
+                        className="absolute bottom-0 right-0 w-3 h-3 bg-[#10B981] rounded-full"
+                        style={{ border: `2px solid ${colors.cardBg}` }}
+                      ></span>
                     )}
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <h3
-                        className={`text-sm font-semibold ${conversation.unread ? "text-gray-900" : "text-gray-700"}`}
-                      >
-                        {conversation.contactName}
-                      </h3>
-                      {conversation.temperature === "hot" && (
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">{t.tempHot}</span>
-                      )}
-                      {conversation.temperature === "warm" && (
-                        <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
-                          {t.tempWarm}
-                        </span>
-                      )}
-                      {conversation.autoReplied && (
-                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
-                          {t.autoReplied}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs text-gray-500">{conversation.timestamp}</span>
-                  </div>
-
-                  <p
-                    className={`text-sm ${conversation.unread ? "text-gray-900 font-medium" : "text-gray-600"} truncate mb-1`}
-                  >
-                    {conversation.lastMessage}
-                  </p>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">{conversation.username}</span>
-                    <div className="flex items-center gap-2">
-                      {conversation.starred && (
-                        <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    {/* Platform badge */}
+                    <div
+                      className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{ background: colors.cardBg, border: `1px solid ${colors.border}` }}
+                    >
+                      {conversation.platform === "instagram" ? (
+                        <svg className="w-3 h-3 text-pink-500" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                         </svg>
                       )}
-                      {conversation.unread && conversation.unreadCount > 0 && (
-                        <span className="px-2 py-0.5 bg-[#7C3AED] text-white rounded-full text-xs font-bold">
-                          {conversation.unreadCount}
-                        </span>
-                      )}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <h3
+                          className="text-sm font-semibold"
+                          style={{ color: colors.heading }}
+                        >
+                          {conversation.contactName}
+                        </h3>
+                        {conversation.temperature === "hot" && (
+                          <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">{t.tempHot}</span>
+                        )}
+                        {conversation.temperature === "warm" && (
+                          <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+                            {t.tempWarm}
+                          </span>
+                        )}
+                        {conversation.autoReplied && (
+                          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                            {t.autoReplied}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs" style={{ color: colors.textMuted }}>{conversation.timestamp}</span>
+                    </div>
+
+                    <p
+                      className="text-sm truncate mb-1"
+                      style={{
+                        color: conversation.unread ? colors.heading : colors.textSecondary,
+                        fontWeight: conversation.unread ? '500' : 'normal',
+                      }}
+                    >
+                      {conversation.lastMessage}
+                    </p>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs" style={{ color: colors.textMuted }}>{conversation.username}</span>
+                      <div className="flex items-center gap-2">
+                        {conversation.starred && (
+                          <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        )}
+                        {conversation.unread && conversation.unreadCount > 0 && (
+                          <span className="px-2 py-0.5 bg-[#7C3AED] text-white rounded-full text-xs font-bold">
+                            {conversation.unreadCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* CENTER COLUMN: Message Thread (35%) */}
-      <div className="w-[35%] bg-white border-l border-gray-200 flex flex-col">
+      <div
+        className="w-[35%] flex flex-col"
+        style={{ background: colors.pageBg, borderLeft: `1px solid ${colors.border}` }}
+      >
         {selectedConversation ? (
           <>
             {/* Header */}
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-4" style={{ borderBottom: `1px solid ${colors.border}`, background: colors.cardBg }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <img
@@ -563,7 +651,7 @@ export default function MessagesPage() {
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-bold text-gray-900">{selectedConversation.contactName}</h2>
+                      <h2 className="text-lg font-bold" style={{ color: colors.heading }}>{selectedConversation.contactName}</h2>
                       {/* Platform badge */}
                       <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium flex items-center gap-1">
                         {selectedConversation.platform === "instagram" ? (
@@ -587,7 +675,7 @@ export default function MessagesPage() {
                         <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">{t.tempHot}</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs" style={{ color: colors.textMuted }}>
                       {selectedConversation.status === "online"
                         ? t.onlineNow
                         : `${t.lastSeen}: ${selectedConversation.lastSeen}`}
@@ -597,8 +685,13 @@ export default function MessagesPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-gray-100 rounded-lg">
-                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <button
+                    className="p-2 rounded-lg"
+                    style={{ color: colors.textSecondary }}
+                    onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.background = colors.surfaceBg}
+                    onMouseLeave={(e) => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -607,8 +700,13 @@ export default function MessagesPage() {
                       />
                     </svg>
                   </button>
-                  <button className="p-2 hover:bg-gray-100 rounded-lg">
-                    <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                  <button
+                    className="p-2 rounded-lg"
+                    style={{ color: colors.textSecondary }}
+                    onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.background = colors.surfaceBg}
+                    onMouseLeave={(e) => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                     </svg>
                   </button>
@@ -617,10 +715,13 @@ export default function MessagesPage() {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ background: colors.pageBg }}>
               {/* Date Separator */}
               <div className="flex items-center justify-center my-6">
-                <span className="px-4 py-1 bg-gray-200 text-gray-600 rounded-full text-xs font-medium">
+                <span
+                  className="px-4 py-1 rounded-full text-xs font-medium"
+                  style={{ background: colors.surfaceBg, color: colors.textSecondary }}
+                >
                   {t.today}
                 </span>
               </div>
@@ -635,11 +736,14 @@ export default function MessagesPage() {
                         alt=""
                       />
                       <div className="max-w-[70%]">
-                        <div className="bg-gray-100 rounded-2xl rounded-tr-none p-3">
-                          <p className="text-gray-900 text-sm">{message.text}</p>
+                        <div
+                          className="rounded-2xl rounded-tr-none p-3"
+                          style={{ background: colors.surfaceBg }}
+                        >
+                          <p className="text-sm" style={{ color: colors.text }}>{message.text}</p>
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-500">{message.timestamp}</span>
+                          <span className="text-xs" style={{ color: colors.textMuted }}>{message.timestamp}</span>
                           {message.autoReply && (
                             <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
                               {t.autoReplied}
@@ -655,9 +759,9 @@ export default function MessagesPage() {
                           <p className="text-sm">{message.text}</p>
                         </div>
                         <div className="flex items-center gap-2 mt-1 justify-end">
-                          <span className="text-xs text-gray-500">{message.timestamp}</span>
+                          <span className="text-xs" style={{ color: colors.textMuted }}>{message.timestamp}</span>
                           {message.sent && !message.delivered && (
-                            <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <svg className="w-4 h-4" style={{ color: colors.textMuted }} fill="currentColor" viewBox="0 0 20 20">
                               <path
                                 fillRule="evenodd"
                                 d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -667,14 +771,14 @@ export default function MessagesPage() {
                           )}
                           {message.delivered && !message.read && (
                             <div className="flex">
-                              <svg className="w-4 h-4 text-gray-400 -mr-2" fill="currentColor" viewBox="0 0 20 20">
+                              <svg className="w-4 h-4 -mr-2" style={{ color: colors.textMuted }} fill="currentColor" viewBox="0 0 20 20">
                                 <path
                                   fillRule="evenodd"
                                   d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                                   clipRule="evenodd"
                                 />
                               </svg>
-                              <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                              <svg className="w-4 h-4" style={{ color: colors.textMuted }} fill="currentColor" viewBox="0 0 20 20">
                                 <path
                                   fillRule="evenodd"
                                   d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -715,7 +819,7 @@ export default function MessagesPage() {
             </div>
 
             {/* Message Composer */}
-            <div className="p-4 border-t border-gray-200">
+            <div className="p-4" style={{ background: colors.cardBg, borderTop: `1px solid ${colors.border}` }}>
               {/* Quick Replies */}
               <div className="mb-3">
                 <button
@@ -741,7 +845,13 @@ export default function MessagesPage() {
                           setMessageText(reply)
                           setShowQuickReplies(false)
                         }}
-                        className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 text-right"
+                        className="p-2 rounded-lg text-sm text-right"
+                        style={{
+                          background: colors.surfaceBg,
+                          color: colors.text,
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.background = colors.cardBgHover}
+                        onMouseLeave={(e) => (e.currentTarget as HTMLButtonElement).style.background = colors.surfaceBg}
                       >
                         {reply}
                       </button>
@@ -753,8 +863,13 @@ export default function MessagesPage() {
               {/* Main Composer */}
               <div className="flex items-end gap-2">
                 {/* Attachment Button */}
-                <button className="p-3 hover:bg-gray-100 rounded-lg flex-shrink-0">
-                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button
+                  className="p-3 rounded-lg flex-shrink-0"
+                  style={{ color: colors.textSecondary }}
+                  onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.background = colors.surfaceBg}
+                  onMouseLeave={(e) => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -776,13 +891,24 @@ export default function MessagesPage() {
                         handleSendMessage()
                       }
                     }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent resize-none text-right"
+                    className="w-full px-4 py-3 rounded-2xl focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent resize-none text-right"
                     rows={1}
-                    style={{ minHeight: "48px", maxHeight: "120px" }}
+                    style={{
+                      minHeight: "48px",
+                      maxHeight: "120px",
+                      background: colors.inputBg,
+                      color: colors.inputText,
+                      border: `1px solid ${colors.inputBorder}`,
+                    }}
                   />
                   {/* Emoji Button */}
-                  <button className="absolute left-3 bottom-3 p-1 hover:bg-gray-100 rounded">
-                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <button
+                    className="absolute left-3 bottom-3 p-1 rounded"
+                    style={{ color: colors.textMuted }}
+                    onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.background = colors.surfaceBg}
+                    onMouseLeave={(e) => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -812,7 +938,7 @@ export default function MessagesPage() {
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <svg className="w-24 h-24 text-gray-300 mb-4" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-24 h-24 mb-4" style={{ color: colors.textMuted }} fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"
                 d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
@@ -820,25 +946,28 @@ export default function MessagesPage() {
               />
             </svg>
 
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{t.selectConversation}</h3>
-            <p className="text-sm text-gray-600">{t.selectConversationDesc}</p>
+            <h3 className="text-xl font-bold mb-2" style={{ color: colors.heading }}>{t.selectConversation}</h3>
+            <p className="text-sm" style={{ color: colors.textSecondary }}>{t.selectConversationDesc}</p>
           </div>
         )}
       </div>
 
       {/* RIGHT COLUMN: Contact Info (35%) */}
-      <div className="w-[35%] bg-white overflow-y-auto">
+      <div
+        className="w-[35%] overflow-y-auto"
+        style={{ background: colors.cardBg, borderLeft: `1px solid ${colors.border}` }}
+      >
         {selectedConversation && (
           <>
             {/* Contact Header */}
-            <div className="p-4 border-b border-gray-200 text-center">
+            <div className="p-4 text-center" style={{ borderBottom: `1px solid ${colors.border}` }}>
               <img
                 src={selectedConversation.avatar || "/placeholder.svg"}
                 alt={selectedConversation.contactName}
                 className="w-20 h-20 rounded-full mx-auto mb-3"
               />
-              <h3 className="text-lg font-bold text-gray-900 mb-1">{selectedConversation.contactName}</h3>
-              <p className="text-sm text-gray-600 mb-2">{selectedConversation.username}</p>
+              <h3 className="text-lg font-bold mb-1" style={{ color: colors.heading }}>{selectedConversation.contactName}</h3>
+              <p className="text-sm mb-2" style={{ color: colors.textSecondary }}>{selectedConversation.username}</p>
 
               {/* Temperature Badge */}
               {selectedConversation.temperature === "hot" && (
@@ -871,7 +1000,7 @@ export default function MessagesPage() {
             <div className="p-4 space-y-4">
               {/* Source */}
               <div>
-                <div className="text-xs text-gray-500 mb-1">{t.source}</div>
+                <div className="text-xs mb-1" style={{ color: colors.textSecondary }}>{t.source}</div>
                 <div className="flex items-center gap-2">
                   {selectedConversation.platform === "instagram" ? (
                     <svg className="w-4 h-4 text-pink-500" fill="currentColor" viewBox="0 0 24 24">
@@ -882,7 +1011,7 @@ export default function MessagesPage() {
                       <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                     </svg>
                   )}
-                  <span className="text-sm text-gray-900">
+                  <span className="text-sm" style={{ color: colors.text }}>
                     {selectedConversation.platform === "instagram" ? "Instagram DM" : "Facebook Messenger"}
                   </span>
                 </div>
@@ -890,26 +1019,37 @@ export default function MessagesPage() {
 
               {/* Email */}
               <div>
-                <div className="text-xs text-gray-500 mb-1">{t.email}</div>
-                <span className="text-sm text-gray-900">{selectedConversation.email}</span>
+                <div className="text-xs mb-1" style={{ color: colors.textSecondary }}>{t.email}</div>
+                <span className="text-sm" style={{ color: colors.text }}>{selectedConversation.email}</span>
               </div>
 
               {/* Phone */}
               <div>
-                <div className="text-xs text-gray-500 mb-1">{t.phone}</div>
-                <span className="text-sm text-gray-900">{selectedConversation.phone}</span>
+                <div className="text-xs mb-1" style={{ color: colors.textSecondary }}>{t.phone}</div>
+                <span className="text-sm" style={{ color: colors.text }}>{selectedConversation.phone}</span>
               </div>
 
               {/* Tags */}
               <div>
-                <div className="text-xs text-gray-500 mb-2">{t.tags}</div>
+                <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>{t.tags}</div>
                 <div className="flex flex-wrap gap-2">
                   {selectedConversation.tags.map((tag, index) => (
                     <span key={index} className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
                       {tag}
                     </span>
                   ))}
-                  <button className="px-2 py-1 border border-dashed border-gray-300 text-gray-600 rounded text-xs hover:border-[#7C3AED] hover:text-[#7C3AED]">
+                  <button
+                    className="px-2 py-1 rounded text-xs border border-dashed"
+                    style={{ borderColor: colors.borderLight, color: colors.textSecondary }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = '#7C3AED';
+                      (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = colors.borderLight;
+                      (e.currentTarget as HTMLButtonElement).style.color = colors.textSecondary;
+                    }}
+                  >
                     + {t.addTag}
                   </button>
                 </div>
@@ -917,16 +1057,21 @@ export default function MessagesPage() {
 
               {/* Notes */}
               <div>
-                <div className="text-xs text-gray-500 mb-2">{t.notes}</div>
+                <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>{t.notes}</div>
                 <textarea
                   placeholder={t.addNotes}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none text-right"
+                  className="w-full px-3 py-2 rounded-lg text-sm resize-none text-right focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent"
                   rows={3}
+                  style={{
+                    background: colors.inputBg,
+                    color: colors.inputText,
+                    border: `1px solid ${colors.inputBorder}`,
+                  }}
                 />
               </div>
 
               {/* Actions */}
-              <div className="space-y-2 pt-2 border-t border-gray-200">
+              <div className="space-y-2 pt-2" style={{ borderTop: `1px solid ${colors.border}` }}>
                 <button className="w-full px-4 py-2 bg-[#7C3AED] text-white rounded-lg hover:bg-[#6D28D9] flex items-center justify-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -939,7 +1084,11 @@ export default function MessagesPage() {
                   {t.viewFullProfile}
                 </button>
 
-                <button className="w-full px-4 py-2 border border-[#7C3AED] text-[#7C3AED] rounded-lg hover:bg-purple-50 flex items-center justify-center gap-2">
+                <button
+                  className="w-full px-4 py-2 border border-[#7C3AED] text-[#7C3AED] rounded-lg flex items-center justify-center gap-2"
+                  onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.background = theme === 'dark' ? '#2a1d4a' : '#f5f3ff'}
+                  onMouseLeave={(e) => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -951,7 +1100,16 @@ export default function MessagesPage() {
                   {t.sendEmailAction}
                 </button>
 
-                <button className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2">
+                <button
+                  className="w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                  style={{
+                    border: `1px solid ${colors.border}`,
+                    color: colors.text,
+                    background: 'transparent',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.background = colors.surfaceBg}
+                  onMouseLeave={(e) => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
+                >
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
